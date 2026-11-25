@@ -1,0 +1,19 @@
+services:
+  db:
+    image: pgrouting/pgrouting:16-3.5-3.7
+    environment:
+      POSTGRES_DB: resiliencia_cl
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d resiliencia_cl"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
