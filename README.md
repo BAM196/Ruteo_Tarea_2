@@ -20,7 +20,7 @@ cd resiliencia-internet-chile
 Instala las dependencias de Python:
 
 ```bash
-python -m pip install "psycopg[binary]" pyproj pyshp
+python -m pip install -r requirements.txt
 ```
 
 Inicia la base de datos:
