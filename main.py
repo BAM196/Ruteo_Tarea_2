@@ -326,6 +326,7 @@ def reproyectar_geojson_geom(geom: dict, transformer: Transformer | None) -> dic
     }
 
 
+
 def exportar_resultados_27f(
     conn,
     attr_original: dict,
@@ -333,13 +334,6 @@ def exportar_resultados_27f(
     attr_post_sismo: dict,
     usar_red_sintetica: bool,
 ) -> None:
-    exportar_resultados_27f(
-    conn=conn,
-    attr_original=attr_antes,
-    attr_sintetica=attr_red_sintetica,
-    attr_post_sismo=attr_despues,
-    usar_red_sintetica=usar_red_sintetica,
-)
     # =========================================================
     # 1. TABLA COMPARATIVA ATTR
     # =========================================================
@@ -1648,6 +1642,42 @@ def main() -> None:
         pct = (diff / attr_referencia * 100.0) if attr_referencia else 0.0
         print(f"ATTR después (sismo 8.8):             {attr_despues['attr']:.6f}")
         print(f"Variación respecto al escenario operativo seleccionado: {diff:+.6f} ({pct:+.2f}%)")
+        # Opción experimental controlada desde la configuración al inicio del archivo.
+        attr_red_sintetica = None
+        usar_red_sintetica = USAR_RED_SINTETICA
+        print(f"\nRed sintética intercomponentes: {'ACTIVADA' if usar_red_sintetica else 'DESACTIVADA'}")
+        if usar_red_sintetica:
+            puentes = activar_red_sintetica_intercomponentes(conn)
+            # La topología puede haber cambiado; volver a asociar nodos clave.
+            seleccionar_nodos_clave(conn, top_hubs=3)
+            auditar_conectividad(conn)
+            attr_red_sintetica = calcular_attr(conn, modo="operacion")
+            print(f"ATTR con red sintética (operación, sin fallas): {attr_red_sintetica['attr']:.6f}")
+            print(f"Cambio atribuible a puentes hipotéticos: {attr_red_sintetica['attr'] - attr_antes['attr']:+.6f}")
+            print(f"Puentes sintéticos agregados: {puentes}")
+
+        # Aplicar sismo y calcular ATTR en el escenario actualmente seleccionado.
+        aplicar_escenario_sismo_27f(
+            conn, alpha=ALFA_CABLE, kc_g=KC_G, vs30_m_s=VS30_M_S,
+            longitud_segmento_km=LONGITUD_SEGMENTO_KM
+        )
+        attr_despues = calcular_attr(conn, modo="post_sismo")
+        attr_referencia = attr_red_sintetica["attr"] if usar_red_sintetica else attr_antes["attr"]
+        diff = attr_despues["attr"] - attr_referencia
+        pct = (diff / attr_referencia * 100.0) if attr_referencia else 0.0
+        print(f"ATTR después (sismo 8.8):             {attr_despues['attr']:.6f}")
+        print(f"Variación respecto al escenario operativo seleccionado: {diff:+.6f} ({pct:+.2f}%)")
+
+        exportar_resultados_27f(
+            conn=conn,
+            attr_original=attr_antes,
+            attr_sintetica=attr_red_sintetica,
+            attr_post_sismo=attr_despues,
+            usar_red_sintetica=usar_red_sintetica,
+        )
+
+    if "--solo-tablas" not in sys.argv:
+        servir_leaflet(lambda: obtener_datos_leaflet_con_conexion(DB_DSN))
     servir_leaflet(lambda: obtener_datos_leaflet_con_conexion(DB_DSN))
 
 
